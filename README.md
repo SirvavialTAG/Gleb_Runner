@@ -1,2 +1,2 @@
-# Gleb_Runner-
+# Gleb_Runner
 Инструкция по установке

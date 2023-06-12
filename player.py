@@ -1,9 +1,10 @@
 import pygame
 from support import import_folder
+from math import sin
 
 
 class Player(pygame.sprite.Sprite):
-    def __init__(self, pos, surface, create_jump_particles):
+    def __init__(self, pos, surface, change_health):
         super().__init__()
         # отрисовываем игрока и передаем ему позицию
         self.import_character_ass()
@@ -17,7 +18,6 @@ class Player(pygame.sprite.Sprite):
         self.frame_index = 0
         self.frame_speed = 0.15
         self.display_surface = surface
-        self.create_jump_particles = create_jump_particles
         self.image = self.animations['straight'][self.frame_index]
         self.rect = self.image.get_rect(topleft=pos)
 
@@ -35,6 +35,12 @@ class Player(pygame.sprite.Sprite):
         self.ceiling = False
         self.on_left = False
         self.on_right = False
+
+        # Здоровье игрока
+        self.change_health = change_health
+        self.protection = False
+        self.protection_time = 200
+        self.damage_time = 0
 
     # функция импортирующая полный путь до нужной нам папки анимации
     def import_character_ass(self):
@@ -60,6 +66,12 @@ class Player(pygame.sprite.Sprite):
             # функция которая переворачивает изображение по оси х, т.к. стоит тру первым и не трогает ось у
             flipped_image = pygame.transform.flip(image, True, False)
             self.image = flipped_image
+
+        if self.protection:
+            alpha = self.flicker()
+            self.image.set_alpha(alpha)
+        else:
+            self.image.set_alpha(255)
 
         # делает так чтобы картинка всегда была на земле и не парила в воздухе
         if self.on_floor and self.on_right:
@@ -125,12 +137,32 @@ class Player(pygame.sprite.Sprite):
 
         if keys[pygame.K_w] and self.on_floor:
             self.jump()
-            self.create_jump_particles(self.rect.midbottom)
 
     # добавляет гравитацию
     def gravitty_mov(self):
         self.movement.y += self.gravity
         self.rect.y += self.movement.y
+
+    # Получение урона от врагов
+    def get_damage(self):
+        if not self.protection:
+            self.change_health(-10)
+            self.protection = True
+            self.damage_time = pygame.time.get_ticks()
+
+    # Таймер защиты после получения урона от врагов
+    def protection_timer(self):
+        if self.protection:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.damage_time >= self.protection_time:
+                self.protection = False
+
+    def flicker(self):
+        value = sin(pygame.time.get_ticks())
+        if value <= 0:
+            return 0
+        else:
+            return 255
 
     # функция которая изменяет направление вектора при прыжке
     def jump(self):
@@ -143,3 +175,5 @@ class Player(pygame.sprite.Sprite):
         self.get_status()
         self.animate()
         self.run_particles_animate()
+        self.protection_timer()
+        self.flicker()
